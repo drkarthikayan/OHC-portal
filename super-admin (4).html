@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OHC Portal — Super Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#0d1a14;--surface:#132010;--surface2:#1a2d1a;--border:#2a3d2a;
+  --green:#2d6a4f;--green2:#40916c;--accent:#74c69d;--gold:#d4a017;
+  --red:#e05252;--amber:#e08c2c;--blue:#4a9eca;--purple:#b06af0;
+  --text:#e8f0e8;--muted:#7a9a7a;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:row;overflow:hidden}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.llogo{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+.llogo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.llogo h1{font-family:'DM Serif Display',serif;font-size:20px}
+.llogo p{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.lbadge{background:linear-gradient(90deg,#7b2d00,#c04a00);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffcba4;margin-bottom:22px;display:inline-block}
+.lalert{font-size:12px;padding:9px 12px;border-radius:8px;margin-bottom:14px;display:none}
+.lalert.show{display:block}
+.lalert.error{background:rgba(224,82,82,.15);color:var(--red);border:1px solid rgba(224,82,82,.3)}
+.lalert.info{background:rgba(74,158,202,.15);color:var(--blue);border:1px solid rgba(74,158,202,.3)}
+.lfield{margin-bottom:14px}
+.lfield label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+.lfield input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.lfield input:focus{border-color:var(--green2)}
+.lbtn{width:100%;background:var(--green);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.lbtn:hover{background:var(--green2)}.lbtn:disabled{opacity:.5;cursor:not-allowed}
+.lspinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+
+/* SIDEBAR */
+.sidebar{width:236px;min-width:236px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.slogo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.slogo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.slogo-text{font-family:'DM Serif Display',serif;font-size:14px;line-height:1.2}
+.slogo-sub{font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.sbadge{margin:9px 13px;background:linear-gradient(90deg,#7b2d00,#c04a00);border-radius:6px;padding:4px 9px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;text-align:center;color:#ffcba4}
+.snav{flex:1;padding:5px 0;overflow-y:auto}
+.snav-sec{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 3px}
+.snav-item{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;border-left:3px solid transparent;font-size:12.5px;color:var(--muted);transition:all .15s;user-select:none}
+.snav-item:hover{background:var(--surface2);color:var(--text)}
+.snav-item.active{background:var(--surface2);border-left-color:var(--accent);color:var(--accent)}
+.snav-item .ico{font-size:14px;width:18px;text-align:center}
+.nbadge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px}
+.sfooter{padding:13px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#fff;flex-shrink:0}
+.fname{font-size:11.5px;font-weight:600}.frole{font-size:10px;color:var(--muted)}
+.logoutbtn{margin-left:auto;cursor:pointer;color:var(--muted);font-size:14px;transition:color .15s;background:none;border:none}.logoutbtn:hover{color:var(--red)}
+
+/* MAIN */
+#shell{display:none;flex:1;flex-direction:row;height:100vh;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 22px;height:54px;display:flex;align-items:center;gap:13px;flex-shrink:0}
+.tb-title{font-family:'DM Serif Display',serif;font-size:16px}
+.tb-bc{font-size:11.5px;color:var(--muted)}.tb-sp{flex:1}
+.tb-stat{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);padding:0 11px;border-left:1px solid var(--border)}
+.tb-stat strong{color:var(--accent);font-size:13px}
+.sdot{width:6px;height:6px;border-radius:50%;background:#4caf50;box-shadow:0 0 5px #4caf5080;animation:pulse 2s infinite}
+.content{flex:1;overflow-y:auto;padding:22px}
+
+/* LOADER */
+#gloader{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center}
+#gloader.show{display:flex}
+.lbox{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:28px 38px;text-align:center}
+.lspin{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+.ltxt{font-size:12.5px;color:var(--muted)}
+
+/* PANELS */
+.panel{display:none;animation:fadeIn .2s ease}.panel.active{display:block}
+
+/* SECTION */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.stitle{font-family:'DM Serif Display',serif;font-size:21px;line-height:1.2}
+.ssub{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+/* STAT CARDS */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:22px}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;transition:transform .15s,border-color .15s}
+.scard:hover{transform:translateY(-2px);border-color:var(--green2)}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ca,var(--accent))}
+.scard .si{font-size:22px;margin-bottom:6px}
+.scard .sv{font-family:'DM Serif Display',serif;font-size:26px;line-height:1;color:var(--ca,var(--accent))}
+.scard .sl{font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.scard .sd{font-size:10.5px;margin-top:4px;color:var(--green2)}
+
+/* CARDS/TABLES */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px}
+.ch{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.ch h3{font-size:12.5px;font-weight:600}.ch .cnt{font-size:10.5px;color:var(--muted);background:var(--surface2);padding:2px 7px;border-radius:20px}
+.ca{margin-left:auto;display:flex;gap:7px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600}
+.bg{background:rgba(74,193,143,.15);color:#74c69d}
+.ba{background:rgba(224,140,44,.15);color:#e08c2c}
+.br{background:rgba(224,82,82,.15);color:#e05252}
+.bb{background:rgba(74,158,202,.15);color:#4a9eca}
+.bm{background:var(--surface2);color:var(--muted)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:7px;font-size:12px;font-weight:500;border:none;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-p{background:var(--green);color:#fff}.btn-p:hover{background:var(--green2)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-g:hover{background:var(--surface2);color:var(--text)}
+.btn-d{background:rgba(224,82,82,.12);color:var(--red);border:1px solid rgba(224,82,82,.25)}.btn-d:hover{background:rgba(224,82,82,.22)}
+.btn-s{padding:3px 8px;font-size:11px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.sbox{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;flex:1}
+.sbox input{background:none;border:none;outline:none;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;width:100%}
+.sbox input::placeholder{color:var(--muted)}
+select.flt{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer}
+
+/* TENANT AVATAR */
+.tavatar{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--green),var(--green2));display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#fff;flex-shrink:0}
+
+/* FORMS */
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:11px}
+.fl{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.fi{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;width:100%}
+.fi:focus{border-color:var(--green2)}
+textarea.fi{resize:vertical;min-height:65px}
+
+/* MODALS */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.moverlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:15px;width:500px;max-width:95vw;animation:slideUp .2s ease;max-height:90vh;display:flex;flex-direction:column}
+.mlg{width:660px}.mxl{width:740px}
+.mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mh h3{font-family:'DM Serif Display',serif;font-size:16px}
+.mclose{background:none;border:none;cursor:pointer;color:var(--muted);font-size:17px;transition:color .15s}.mclose:hover{color:var(--text)}
+.mbody{padding:20px;overflow-y:auto}
+.mfoot{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+
+/* BILLING */
+.plan-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:20px}
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:all .15s}
+.plan-card:hover{border-color:var(--green2)}
+.pname{font-family:'DM Serif Display',serif;font-size:14px;margin-bottom:2px}
+.pprice{font-size:19px;font-weight:700}.pprice span{font-size:10px;color:var(--muted);font-weight:400}
+.pfeatures{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.9}
+
+/* INVOICE */
+.irow{display:grid;grid-template-columns:3fr 65px 55px 85px 30px;gap:6px;margin-bottom:6px;align-items:center}
+.ihdr{display:grid;grid-template-columns:3fr 65px 55px 85px 30px;gap:6px;padding:0 0 5px;border-bottom:1px solid var(--border);margin-bottom:6px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ii{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11.5px;font-family:'DM Sans',sans-serif;outline:none;width:100%;transition:border-color .15s}
+.ii:focus{border-color:var(--green2)}
+.itbox{background:var(--surface2);border-radius:7px;padding:12px 14px;font-size:12px}
+.itrow{display:flex;justify-content:space-between;margin-bottom:4px}
+.itrow.final{font-weight:700;font-size:14px;border-top:1px solid var(--border);padding-top:8px;margin-top:4px;margin-bottom:0}
+
+/* PLAN EDITOR */
+.perow{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:13px;margin-bottom:11px;animation:fadeIn .2s ease}
+
+/* ACTIVITY */
+.fitem{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--border)}
+.fitem:last-child{border-bottom:none}
+.ficon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.ftxt{font-size:12px;line-height:1.4}.ftime{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+/* PROGRESS */
+.pbar{background:var(--surface2);border-radius:20px;height:5px;overflow:hidden}
+.pfill{height:100%;border-radius:20px;background:var(--green2);transition:width .6s ease}
+
+/* CONFIRM */
+#covl{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+#covl.open{display:flex}
+.cbox{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:24px;width:320px;text-align:center}
+.cbox h3{font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:6px}
+.cbox p{font-size:12px;color:var(--muted);margin-bottom:16px}
+.cacts{display:flex;gap:8px;justify-content:center}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);padding:10px 15px;border-radius:7px;font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,.5);transform:translateY(60px);opacity:0;transition:all .25s;z-index:300;max-width:280px}
+#toast.show{transform:none;opacity:1}
+
+/* EMPTY */
+.empty{text-align:center;padding:36px 16px;color:var(--muted)}.empty .ei{font-size:32px;margin-bottom:8px}.empty p{font-size:12.5px}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--green)}
+@media(max-width:900px){.sgrid{grid-template-columns:repeat(2,1fr)}.plan-cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- GLOBAL LOADER -->
+<div id="gloader"><div class="lbox"><div class="lspin"></div><div class="ltxt" id="ltxt">Loading…</div></div></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="lcard">
+    <div class="llogo"><div class="llogo-icon">🏥</div><div><h1>OHC Portal</h1><p>Occupational Health</p></div></div>
+    <div class="lbadge">⚡ Super Admin</div>
+    <div class="lalert error" id="lerr"></div>
+    <div class="lalert info"  id="linfo"></div>
+    <div class="lfield"><label>Email Address</label><input type="email" id="sa-email" placeholder="superadmin@ohcportal.in" autocomplete="email"/></div>
+    <div class="lfield"><label>Password</label><input type="password" id="sa-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <button class="lbtn" id="lbtn" onclick="doLogin()"><div class="lspinner" id="lspin"></div><span id="lbtn-txt">Sign In</span></button>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="shell" style="width:100%">
+  <aside class="sidebar">
+    <div class="slogo"><div class="slogo-icon">🏥</div><div><div class="slogo-text">OHC Portal</div><div class="slogo-sub">Super Admin</div></div></div>
+    <div class="sbadge">⚡ Super Admin</div>
+    <nav class="snav">
+      <div class="snav-sec">Overview</div>
+      <div class="snav-item active" onclick="showPanel('dashboard',this)"><span class="ico">📊</span>Dashboard</div>
+      <div class="snav-sec">Management</div>
+      <div class="snav-item" onclick="showPanel('tenants',this)"><span class="ico">🏢</span>Tenants / OHCs</div>
+      <div class="snav-item" onclick="showPanel('users',this)"><span class="ico">👥</span>Users<span class="nbadge" id="pb" style="display:none">0</span></div>
+      <div class="snav-sec">Finance</div>
+      <div class="snav-item" onclick="showPanel('billing',this)"><span class="ico">💳</span>Billing</div>
+      <div class="snav-sec">Insights</div>
+      <div class="snav-item" onclick="showPanel('analytics',this)"><span class="ico">📈</span>Analytics</div>
+      <div class="snav-item" onclick="showPanel('activity',this)"><span class="ico">🕐</span>Activity Log</div>
+      <div class="snav-sec">System</div>
+      <div class="snav-item" onclick="showPanel('settings',this)"><span class="ico">⚙️</span>Settings</div>
+    </nav>
+    <div class="sfooter">
+      <div class="avatar" id="sb-av">S</div>
+      <div><div class="fname" id="sb-name">Super Admin</div><div class="frole" id="sb-email">—</div></div>
+      <button class="logoutbtn" onclick="doLogout()" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <div style="flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden">
+    <header class="topbar">
+      <div><span class="tb-title">Command Centre</span><span class="tb-bc" id="bc"> / Dashboard</span></div>
+      <div class="tb-sp"></div>
+      <div class="tb-stat"><div class="sdot"></div>&nbsp;Firebase</div>
+      <div class="tb-stat"><strong id="tb-t">0</strong>&nbsp;Tenants</div>
+      <div class="tb-stat"><strong id="tb-u">0</strong>&nbsp;Users</div>
+      <div class="tb-stat" id="tb-time"></div>
+    </header>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="sh"><div><div class="stitle">Good morning 👋</div><div class="ssub" id="dash-date"></div></div><button class="btn btn-g btn-s" onclick="loadAll()">↻ Refresh</button></div>
+        <div class="sgrid">
+          <div class="scard" style="--ca:#74c69d"><div class="si">🏢</div><div class="sv" id="ds-t">—</div><div class="sl">Tenants</div><div class="sd" id="ds-act">— active</div></div>
+          <div class="scard" style="--ca:#4a9eca"><div class="si">👥</div><div class="sv" id="ds-u">—</div><div class="sl">Total Users</div><div class="sd" id="ds-pend">— pending</div></div>
+          <div class="scard" style="--ca:#d4a017"><div class="si">💰</div><div class="sv" id="ds-mrr">₹—</div><div class="sl">MRR</div><div class="sd">Monthly recurring</div></div>
+          <div class="scard" style="--ca:#e05252"><div class="si">⚠️</div><div class="sv" id="ds-iss">—</div><div class="sl">Pending Approvals</div><div class="sd" style="color:var(--muted)">Need action</div></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="ch"><span>⚡</span><h3>Quick Actions</h3></div>
+          <div style="display:flex;gap:9px;padding:13px;flex-wrap:wrap">
+            <button class="btn btn-p" onclick="showPanel('tenants',null);openTenantModal()">+ New Tenant</button>
+            <button class="btn btn-g" onclick="showPanel('users',null)">Manage Users</button>
+            <button class="btn btn-g" onclick="showPanel('billing',null)">Billing</button>
+            <button class="btn btn-g" onclick="showPanel('analytics',null)">Analytics</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span>🏢</span><h3>Recent Tenants</h3><span class="cnt" id="dt-cnt">0</span><div class="ca"><button class="btn btn-g btn-s" onclick="showPanel('tenants',null)">View all →</button></div></div>
+          <table><thead><tr><th>Organisation</th><th>Plan</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody id="dt-body"><tr><td colspan="4"><div class="empty"><div class="ei">🏢</div><p>Loading…</p></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- TENANTS -->
+      <div class="panel" id="panel-tenants">
+        <div class="sh"><div><div class="stitle">Tenant Management</div><div class="ssub">All OHC organisations</div></div><button class="btn btn-p" onclick="openTenantModal()">+ New Tenant</button></div>
+        <div class="toolbar">
+          <div class="sbox">🔍 <input id="ts" placeholder="Search name, subdomain, email…" oninput="renderTT()"/></div>
+          <select class="flt" id="tf" onchange="renderTT()"><option value="">All Statuses</option><option value="active">Active</option><option value="trial">Trial</option><option value="suspended">Suspended</option></select>
+          <select class="flt" id="tpf" onchange="renderTT()"><option value="">All Plans</option></select>
+        </div>
+        <div class="card">
+          <div class="ch"><span>🏢</span><h3>All Tenants</h3><span class="cnt" id="tc-lbl">0</span></div>
+          <table><thead><tr><th>Organisation</th><th>Subdomain</th><th>Plan</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="tt-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="panel" id="panel-users">
+        <div class="sh"><div><div class="stitle">User Management</div><div class="ssub">All users across every tenant</div></div><button class="btn btn-p" onclick="openUserModal()">+ Add User</button></div>
+        <div class="toolbar">
+          <div class="sbox">🔍 <input id="us" placeholder="Search name, email, tenant…" oninput="renderUT()"/></div>
+          <select class="flt" id="urf" onchange="renderUT()"><option value="">All Roles</option><option>doctor</option><option>nurse</option><option>admin</option><option>pharmacy</option><option>staff</option></select>
+          <select class="flt" id="usf" onchange="renderUT()"><option value="">All Statuses</option><option value="Approved">Approved</option><option value="Pending">Pending</option><option value="suspended">Suspended</option></select>
+        </div>
+        <div class="card">
+          <div class="ch"><span>👥</span><h3>All Users</h3><span class="cnt" id="uc-lbl">0</span></div>
+          <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Tenant</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="ut-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- BILLING -->
+      <div class="panel" id="panel-billing">
+        <div class="sh">
+          <div><div class="stitle">Billing & Subscriptions</div><div class="ssub">Manage plans, discounts, invoices</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-g" onclick="openPlanEditor()">✏️ Edit Plans</button>
+            <button class="btn btn-p" onclick="openInvoiceWizard()">🧾 New Invoice</button>
+          </div>
+        </div>
+        <div class="sgrid">
+          <div class="scard" style="--ca:#d4a017"><div class="si">💰</div><div class="sv" id="b-mrr">₹—</div><div class="sl">MRR</div><div class="sd">Monthly Recurring</div></div>
+          <div class="scard" style="--ca:#74c69d"><div class="si">✅</div><div class="sv" id="b-paid">—</div><div class="sl">Active Paid</div><div class="sd" id="b-pct">—</div></div>
+          <div class="scard" style="--ca:#e08c2c"><div class="si">🔄</div><div class="sv" id="b-trial">—</div><div class="sl">On Trial</div><div class="sd">Convert to paid</div></div>
+          <div class="scard" style="--ca:#e05252"><div class="si">⚠️</div><div class="sv" id="b-susp">—</div><div class="sl">Suspended</div><div class="sd">Revenue risk</div></div>
+        </div>
+        <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:11px">Pricing Plans <span style="font-family:'DM Sans',sans-serif;font-size:10.5px;color:var(--muted);font-weight:400">— click Edit Plans to modify</span></div>
+        <div class="plan-cards" id="plan-cards"></div>
+        <div class="card">
+          <div class="ch"><span>📋</span><h3>Billing by Tenant</h3><span class="cnt" id="b-tc">0</span>
+            <div class="ca"><select class="flt btn-s" id="bsf" onchange="renderBT()"><option value="">All</option><option value="active">Active</option><option value="trial">Trial</option><option value="suspended">Suspended</option></select></div>
+          </div>
+          <table><thead><tr><th>Tenant</th><th>Plan</th><th>Base</th><th>Discount</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="bt-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="panel" id="panel-analytics">
+        <div class="sh"><div><div class="stitle">Platform Analytics</div><div class="ssub">Aggregated from all tenants' Firestore data</div></div></div>
+        <div class="sgrid">
+          <div class="scard" style="--ca:#74c69d"><div class="si">📋</div><div class="sv" id="an-opd">—</div><div class="sl">OPD Visits</div><div class="sd">All tenants</div></div>
+          <div class="scard" style="--ca:#4a9eca"><div class="si">👤</div><div class="sv" id="an-emp">—</div><div class="sl">Employees</div><div class="sd">Registered</div></div>
+          <div class="scard" style="--ca:#d4a017"><div class="si">💊</div><div class="sv" id="an-ph">—</div><div class="sl">Pharmacy Items</div><div class="sd">Across all OHCs</div></div>
+          <div class="scard" style="--ca:#b06af0"><div class="si">📄</div><div class="sv" id="an-cert">—</div><div class="sl">Certificates</div><div class="sd">Total issued</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="ch"><span>🏥</span><h3>Activity by Tenant</h3></div>
+            <table><thead><tr><th>Tenant</th><th>Employees</th><th>OPD</th><th>Plan</th></tr></thead>
+            <tbody id="an-tb"></tbody></table>
+          </div>
+          <div class="card">
+            <div class="ch"><span>📊</span><h3>Plan Distribution</h3></div>
+            <div style="padding:14px" id="an-dist"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="panel" id="panel-activity">
+        <div class="sh"><div><div class="stitle">Activity Log</div><div class="ssub">Super Admin audit trail</div></div></div>
+        <div class="card"><div class="ch"><span>🕐</span><h3>Recent Activity</h3></div><div style="padding:0 14px" id="af"></div></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="panel" id="panel-settings">
+        <div class="sh"><div><div class="stitle">Platform Settings</div><div class="ssub">Saved to Firestore /config/superAdmin</div></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="ch"><span>🔥</span><h3>Firebase Project</h3></div>
+            <div style="padding:16px">
+              <div class="fg"><label class="fl">Project ID</label><input class="fi" value="ohc-portal-4f2f8" readonly/></div>
+              <div class="fg"><label class="fl">Hosting URL</label><input class="fi" value="ohc-portal-4f2f8.web.app" readonly/></div>
+              <div class="fg"><label class="fl">Firestore Region</label><input class="fi" value="asia-south1" readonly/></div>
+              <div class="fg"><label class="fl">Auth Domain</label><input class="fi" value="ohc-portal-4f2f8.firebaseapp.com" readonly/></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><span>⚙️</span><h3>Platform Config</h3></div>
+            <div style="padding:16px">
+              <div class="fg"><label class="fl">Default Trial (days)</label><input class="fi" id="cfg-trial" type="number" value="14"/></div>
+              <div class="fg"><label class="fl">Support Email</label><input class="fi" id="cfg-support" value="support@ohcportal.in"/></div>
+              <div class="fg"><label class="fl">Default GST %</label><input class="fi" id="cfg-gst" type="number" value="18"/></div>
+              <button class="btn btn-p" onclick="saveConfig()">💾 Save to Firestore</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div>
+</div><!-- /shell -->
+
+<!-- MODALS -->
+
+<!-- Tenant Modal -->
+<div class="moverlay" id="tm">
+  <div class="modal">
+    <div class="mh"><h3 id="tm-title">New OHC Tenant</h3><button class="mclose" onclick="closeM('tm')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="tm-id"/>
+      <div class="frow">
+        <div class="fg"><label class="fl">Organisation Name *</label><input class="fi" id="tm-name" placeholder="Apollo Tech OHC"/></div>
+        <div class="fg"><label class="fl">Merchant ID *</label><input class="fi" id="tm-mid" placeholder="M1001"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Subdomain *</label><input class="fi" id="tm-sub" placeholder="apollo-tech"/></div>
+        <div class="fg"><label class="fl">Contact Email *</label><input class="fi" id="tm-email" type="email" placeholder="admin@company.com"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Plan</label><select class="fi" id="tm-plan"></select></div>
+        <div class="fg"><label class="fl">Status</label><select class="fi" id="tm-status"><option value="trial">Trial</option><option value="active">Active</option><option value="suspended">Suspended</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Phone</label><input class="fi" id="tm-phone" placeholder="+91 98765 43210"/></div>
+        <div class="fg"><label class="fl">Discount %</label><input class="fi" id="tm-disc" type="number" value="0" min="0" max="100"/></div>
+      </div>
+      <div class="fg"><label class="fl">Address</label><textarea class="fi" id="tm-addr"></textarea></div>
+    </div>
+    <div class="mfoot"><button class="btn btn-g" onclick="closeM('tm')">Cancel</button><button class="btn btn-p" onclick="saveTenant()">💾 Save to Firestore</button></div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="moverlay" id="um">
+  <div class="modal">
+    <div class="mh"><h3 id="um-title">Add User</h3><button class="mclose" onclick="closeM('um')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="um-id"/><input type="hidden" id="um-tid"/>
+      <div class="frow">
+        <div class="fg"><label class="fl">Full Name *</label><input class="fi" id="um-name" placeholder="Dr. Karthikayan"/></div>
+        <div class="fg"><label class="fl">Email *</label><input class="fi" id="um-email" type="email" placeholder="user@company.com"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Role *</label><select class="fi" id="um-role"><option>doctor</option><option>nurse</option><option>admin</option><option>pharmacy</option><option>staff</option></select></div>
+        <div class="fg"><label class="fl">Tenant *</label><select class="fi" id="um-tenant"></select></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Status</label><select class="fi" id="um-status"><option value="Approved">Approved</option><option value="Pending">Pending</option><option value="suspended">Suspended</option></select></div>
+        <div class="fg"><label class="fl">Mobile</label><input class="fi" id="um-mob" placeholder="9876543210"/></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn btn-g" onclick="closeM('um')">Cancel</button><button class="btn btn-p" onclick="saveUser()">💾 Save to Firestore</button></div>
+  </div>
+</div>
+
+<!-- Plan Editor Modal -->
+<div class="moverlay" id="pem">
+  <div class="modal mlg">
+    <div class="mh"><h3>✏️ Edit Plans & Pricing</h3><button class="mclose" onclick="closeM('pem')">✕</button></div>
+    <div class="mbody" style="max-height:62vh;overflow-y:auto">
+      <p style="font-size:11.5px;color:var(--muted);margin-bottom:14px">Saved to Firestore /config/superAdmin — applies to all new invoices immediately.</p>
+      <div id="pe-rows"></div>
+      <button class="btn btn-g" onclick="addPlanRow()" style="width:100%;justify-content:center;border-style:dashed">+ Add Plan</button>
+    </div>
+    <div class="mfoot"><button class="btn btn-g" onclick="closeM('pem')">Cancel</button><button class="btn btn-p" onclick="savePlans()">💾 Save All Plans</button></div>
+  </div>
+</div>
+
+<!-- Invoice Wizard -->
+<div class="moverlay" id="iw">
+  <div class="modal mlg">
+    <div class="mh"><h3>🧾 Generate Invoice</h3><button class="mclose" onclick="closeM('iw')">✕</button></div>
+    <div class="mbody" style="max-height:74vh;overflow-y:auto">
+      <div class="frow">
+        <div class="fg"><label class="fl">Tenant *</label><select class="fi" id="iv-t" onchange="onIvT()"><option value="">— Select Tenant —</option></select></div>
+        <div class="fg"><label class="fl">Invoice Number</label><input class="fi" id="iv-no" placeholder="OHC-2026-001"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Invoice Date *</label><input class="fi" type="date" id="iv-date"/></div>
+        <div class="fg"><label class="fl">Due Date *</label><input class="fi" type="date" id="iv-due"/></div>
+      </div>
+      <div style="font-weight:600;font-size:11.5px;margin-bottom:7px;color:var(--accent)">Line Items</div>
+      <div class="ihdr"><span>Description</span><span>Unit</span><span>Qty</span><span>Rate (₹)</span><span></span></div>
+      <div id="iv-items"></div>
+      <button class="btn btn-g btn-s" onclick="addIvItem()" style="width:100%;justify-content:center;border-style:dashed;margin-top:6px">+ Add Item</button>
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:13px">
+        <div class="frow">
+          <div class="fg"><label class="fl">Discount %</label><input class="fi" type="number" id="iv-disc" value="0" min="0" max="100" oninput="calcTotal()"/></div>
+          <div class="fg"><label class="fl">GST %</label><input class="fi" type="number" id="iv-gst" value="18" min="0" max="28" oninput="calcTotal()"/></div>
+        </div>
+        <div class="itbox">
+          <div class="itrow"><span style="color:var(--muted)">Subtotal</span><span id="iv-sub">₹0</span></div>
+          <div class="itrow"><span style="color:var(--muted)">Discount</span><span id="iv-dv" style="color:var(--red)">−₹0</span></div>
+          <div class="itrow"><span style="color:var(--muted)">GST</span><span id="iv-gv">+₹0</span></div>
+          <div class="itrow final"><span style="color:var(--accent)">Total Due</span><span id="iv-tot" style="color:var(--gold)">₹0</span></div>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:13px"><label class="fl">Notes / Payment Instructions</label><textarea class="fi" id="iv-notes" placeholder="Payment via NEFT/UPI within due date.&#10;GSTIN: 29AABCX1234Z1ZX"></textarea></div>
+    </div>
+    <div class="mfoot"><button class="btn btn-g" onclick="closeM('iw')">Cancel</button><button class="btn btn-p" onclick="previewInv()">👁 Preview & Print</button></div>
+  </div>
+</div>
+
+<!-- Invoice Preview -->
+<div class="moverlay" id="ip">
+  <div class="modal mxl" style="max-height:92vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="mh">
+      <h3>Invoice Preview</h3>
+      <div style="display:flex;gap:7px;margin-left:auto">
+        <button class="btn btn-g btn-s" onclick="closeM('ip')">✕ Close</button>
+        <button class="btn btn-p btn-s" onclick="printInv()">🖨 Print / PDF</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto"><div id="ip-area" style="background:#fff;color:#1a1a1a;font-family:'DM Sans',sans-serif;padding:38px 46px;min-height:580px"></div></div>
+  </div>
+</div>
+
+<!-- Confirm -->
+<div id="covl"><div class="cbox"><h3 id="c-title">Sure?</h3><p id="c-msg">Cannot be undone.</p><div class="cacts"><button class="btn btn-g" onclick="closeC()">Cancel</button><button class="btn btn-d" id="c-ok">Confirm</button></div></div></div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── FIREBASE CONFIG (mirrors live portal) ─────────────────
+const FB = {
+  apiKey:            'AIzaSyABFrkxulbCssnNDZjFUT4dwKI307zUAAM',
+  authDomain:        'ohc-portal-4f2f8.firebaseapp.com',
+  projectId:         'ohc-portal-4f2f8',
+  storageBucket:     'ohc-portal-4f2f8.firebasestorage.app',
+  messagingSenderId: '992581292202',
+  appId:             '1:992581292202:web:dbe773f6a64f229b6580d3'
+};
+if(!firebase.apps.length) firebase.initializeApp(FB);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
+
+// ── STATE ─────────────────────────────────────────────────
+let SA = null, TENANTS = [], USERS = [], PLANS = [], ACTIVITY = [], GCFG = {trialDays:14,supportEmail:'support@ohcportal.in',gstPct:18};
+let IVC = 0;
+
+// ── HELPERS ───────────────────────────────────────────────
+const G = id => document.getElementById(id);
+const esc = s => { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; };
+const fmt = v => '₹'+(+v||0).toLocaleString('en-IN');
+const fmtD = iso => { if(!iso) return '—'; try{ const d=iso?.toDate?iso.toDate():new Date(iso); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }catch(e){return iso||'—';} };
+const inits = n => (n||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()||'?';
+const ago = iso => { const s=Math.floor((Date.now()-new Date(iso).getTime())/1000); if(s<60)return 'just now'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; };
+const sbadge = s => { const m={active:'bg',trial:'ba',suspended:'br',Approved:'bg',Pending:'ba',pending:'ba'}; return `<span class="badge ${m[s]||'bm'}">${s||'—'}</span>`; };
+const gpp = n => { const p=PLANS.find(x=>x.name===n); return p?p.price:0; };
+const planColor = n => (PLANS.find(p=>p.name===n)||{}).color||'#2d6a4f';
+
+function showL(msg='Loading…'){ G('ltxt').textContent=msg; G('gloader').classList.add('show'); }
+function hideL(){ G('gloader').classList.remove('show'); }
+
+let _tt;
+function toast(msg,type='success'){ const t=G('toast'); const c={success:'var(--accent)',error:'var(--red)',info:'var(--blue)'}; t.style.borderLeftColor=c[type]||c.success; t.textContent=msg; t.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),3200); }
+
+let _cc=null;
+function confirm2(title,msg,cb){ G('c-title').textContent=title; G('c-msg').textContent=msg; _cc=cb; G('covl').classList.add('open'); }
+function closeC(){ G('covl').classList.remove('open'); _cc=null; }
+G('c-ok').onclick = ()=>{ closeC(); if(_cc)_cc(); };
+
+function openM(id){ G(id).classList.add('open'); }
+function closeM(id){ G(id).classList.remove('open'); }
+document.querySelectorAll('.moverlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }));
+
+function log(icon,text,color='var(--accent)'){ ACTIVITY.unshift({icon,text,color,time:new Date().toISOString()}); ACTIVITY=ACTIVITY.slice(0,100); }
+
+// ── CLOCK ─────────────────────────────────────────────────
+setInterval(()=>{ G('tb-time').textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); },1000);
+G('dash-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// ── AUTH ──────────────────────────────────────────────────
+auth.onAuthStateChanged(async user=>{
+  if(!user){ showLogin(); return; }
+  try{
+    const tok=await user.getIdTokenResult(true);
+    if(tok.claims.role!=='super_admin'){ await auth.signOut(); loginErr('Access denied — role is "'+( tok.claims.role||'none')+'", not super_admin'); return; }
+    SA={uid:user.uid,email:user.email,name:tok.claims.name||user.displayName||user.email.split('@')[0]};
+    G('sb-av').textContent=SA.name[0].toUpperCase();
+    G('sb-name').textContent=SA.name;
+    G('sb-email').textContent=SA.email;
+    G('login-screen').style.display='none';
+    G('shell').style.display='flex';
+    renderDash();
+    loadAll();
+  }catch(e){ await auth.signOut(); loginErr('Auth error: '+e.message); }
+});
+
+function showLogin(){ G('login-screen').style.display='flex'; G('shell').style.display='none'; }
+function loginErr(msg){ const e=G('lerr'); e.textContent=msg; e.classList.add('show'); G('lbtn').disabled=false; G('lspin').style.display='none'; G('lbtn-txt').textContent='Sign In'; }
+
+async function doLogin(){
+  const email=G('sa-email').value.trim(), pass=G('sa-pass').value;
+  if(!email||!pass){ loginErr('Enter email and password.'); return; }
+  G('lbtn').disabled=true; G('lspin').style.display='block'; G('lbtn-txt').textContent='Signing in…';
+  G('lerr').classList.remove('show');
+  try{ await auth.signInWithEmailAndPassword(email,pass); }
+  catch(e){ const m={'auth/user-not-found':'No account found.','auth/wrong-password':'Incorrect password.','auth/too-many-requests':'Too many attempts.','auth/user-disabled':'Account suspended.'}; loginErr(m[e.code]||e.message); }
+}
+
+async function doLogout(){ await auth.signOut(); TENANTS=[];USERS=[];PLANS=[]; showLogin(); }
+
+// ── LOAD ALL DATA ─────────────────────────────────────────
+async function loadAll(){
+  showL('Loading portal data…');
+  try{
+    // Merchants (tenants)
+    const ms=await db.collection('merchants').get();
+    TENANTS=ms.docs.map(d=>({id:d.id,...d.data()}));
+
+    // Global config + plans
+    const cs=await db.collection('config').doc('superAdmin').get();
+    if(cs.exists){ const c=cs.data(); if(c.plans)PLANS=c.plans; if(c.trialDays)GCFG.trialDays=c.trialDays; if(c.supportEmail)GCFG.supportEmail=c.supportEmail; if(c.gstPct)GCFG.gstPct=c.gstPct; }
+    if(!PLANS.length) PLANS=defaultPlans();
+
+    // Users from all tenant subcollections in parallel
+    USERS=[];
+    await Promise.all(TENANTS.map(async t=>{
+      try{ const us=await db.collection('merchants').doc(t.id).collection('users').get(); us.docs.forEach(d=>USERS.push({id:d.id,tId:t.id,tName:t.name||t.id,...d.data()})); }catch(e){}
+    }));
+
+    hideL();
+    renderDash(); renderPlanCards(); renderPlanOpts();
+    toast('Portal data loaded','success');
+    log('🔄','Data refreshed from Firestore','var(--blue)');
+  }catch(e){ hideL(); toast('Load error: '+e.message,'error'); console.error(e); }
+}
+
+function defaultPlans(){
+  return [
+    {id:'starter',   name:'Starter',    price:2999,  color:'#74c69d', features:['Up to 3 users','OPD management','Basic reports','Email support']},
+    {id:'pro',       name:'Pro',        price:6999,  color:'#4a9eca', features:['Up to 10 users','Full OPD + Pharmacy','Medical exams','IHI analytics','Priority support']},
+    {id:'enterprise',name:'Enterprise', price:14999, color:'#b06af0', features:['Unlimited users','All Pro features','Custom subdomain','Dedicated SLA']}
+  ];
+}
+
+// ── NAV ───────────────────────────────────────────────────
+function showPanel(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  G('panel-'+id).classList.add('active');
+  document.querySelectorAll('.snav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  G('bc').textContent=' / '+id.charAt(0).toUpperCase()+id.slice(1);
+  const fn={tenants:renderTT,users:renderUT,billing:renderBP,analytics:renderAN,activity:renderAF,settings:loadCfgForm};
+  if(fn[id]) fn[id]();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+function renderDash(){
+  const active=TENANTS.filter(t=>t.status==='active').length;
+  const pend=USERS.filter(u=>u.status==='Pending').length;
+  const mrr=TENANTS.reduce((s,t)=>s+gpp(t.plan),0);
+  G('ds-t').textContent=TENANTS.length; G('ds-act').textContent=active+' active';
+  G('ds-u').textContent=USERS.length; G('ds-pend').textContent=pend+' pending';
+  G('ds-mrr').textContent=fmt(mrr); G('ds-iss').textContent=pend;
+  G('tb-t').textContent=TENANTS.length; G('tb-u').textContent=USERS.length;
+  const pb=G('pb'); pb.textContent=pend; pb.style.display=pend?'':'none';
+  G('dt-cnt').textContent=TENANTS.length;
+  const tb=G('dt-body');
+  if(!TENANTS.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><div class="ei">🏢</div><p>No tenants yet</p></div></td></tr>';return;}
+  tb.innerHTML=[...TENANTS].reverse().slice(0,6).map(t=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="tavatar">${inits(t.name)}</div><div><div style="font-weight:500">${esc(t.name)}</div><div style="font-size:10px;color:var(--muted)">${esc(t.subdomain||t.id)}.ohcportal.in</div></div></div></td>
+      <td><span class="badge bb">${esc(t.plan||'—')}</span></td>
+      <td>${sbadge(t.status)}</td>
+      <td style="color:var(--muted);font-size:10.5px">${fmtD(t.createdAt)}</td>
+    </tr>`).join('');
+}
+
+// ── TENANTS ───────────────────────────────────────────────
+function renderPlanOpts(){
+  ['tpf','tm-plan'].forEach(id=>{
+    const el=G(id); if(!el)return;
+    const old=el.value;
+    const prefix=id==='tpf'?'<option value="">All Plans</option>':'';
+    el.innerHTML=prefix+PLANS.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+    el.value=old;
+  });
+}
+
+function renderTT(){
+  const q=(G('ts').value||'').toLowerCase(), sf=G('tf').value, pf=G('tpf').value;
+  let rows=TENANTS.filter(t=>{
+    const m=!q||(t.name||'').toLowerCase().includes(q)||(t.subdomain||'').toLowerCase().includes(q)||(t.email||'').toLowerCase().includes(q)||(t.merchantId||t.id).toLowerCase().includes(q);
+    return m&&(!sf||t.status===sf)&&(!pf||t.plan===pf);
+  });
+  G('tc-lbl').textContent=rows.length;
+  const tb=G('tt-body');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">🔍</div><p>No tenants match</p></div></td></tr>';return;}
+  tb.innerHTML=rows.map(t=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="tavatar">${inits(t.name)}</div><div><div style="font-weight:500">${esc(t.name)}</div><div style="font-size:10px;color:var(--muted)">${esc(t.email||'')}</div></div></div></td>
+      <td style="font-size:10.5px;color:var(--muted)">${esc(t.subdomain||t.merchantId||t.id)}.ohcportal.in</td>
+      <td><span class="badge bb">${esc(t.plan||'—')}</span></td>
+      <td>${sbadge(t.status)}</td>
+      <td style="color:var(--muted);font-size:10.5px">${fmtD(t.createdAt)}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-g btn-s" onclick="editTenant('${t.id}')">✏️</button>
+        <button class="btn btn-d btn-s" onclick="delTenant('${t.id}')">🗑</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function openTenantModal(id){
+  renderPlanOpts();
+  if(id){
+    const t=TENANTS.find(x=>x.id===id); if(!t)return;
+    G('tm-title').textContent='Edit Tenant'; G('tm-id').value=id;
+    G('tm-name').value=t.name||''; G('tm-mid').value=t.merchantId||id; G('tm-sub').value=t.subdomain||'';
+    G('tm-email').value=t.email||''; G('tm-phone').value=t.phone||''; G('tm-addr').value=t.address||'';
+    G('tm-disc').value=t.discount||0; G('tm-plan').value=t.plan||'Starter'; G('tm-status').value=t.status||'trial';
+    G('tm-mid').readOnly=true;
+  } else {
+    G('tm-title').textContent='New OHC Tenant'; G('tm-id').value='';
+    ['tm-name','tm-mid','tm-sub','tm-email','tm-phone','tm-addr'].forEach(f=>G(f).value='');
+    G('tm-disc').value=0; G('tm-status').value='trial'; G('tm-mid').readOnly=false;
+  }
+  openM('tm');
+}
+function editTenant(id){ openTenantModal(id); }
+
+async function saveTenant(){
+  const name=G('tm-name').value.trim(), mid=G('tm-mid').value.trim();
+  const sub=G('tm-sub').value.trim(), email=G('tm-email').value.trim();
+  if(!name||!mid||!sub||!email){toast('Name, Merchant ID, subdomain & email required','error');return;}
+  const editId=G('tm-id').value;
+  const data={name,merchantId:mid,subdomain:sub,email,phone:G('tm-phone').value.trim(),address:G('tm-addr').value.trim(),plan:G('tm-plan').value,status:G('tm-status').value,discount:parseInt(G('tm-disc').value)||0};
+  showL(editId?'Updating tenant…':'Creating tenant…');
+  try{
+    if(editId){
+      await db.collection('merchants').doc(editId).update({...data,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      TENANTS=TENANTS.map(t=>t.id===editId?{...t,...data}:t);
+      log('✏️',`Tenant "${name}" updated`,'var(--blue)');
+    } else {
+      await db.collection('merchants').doc(mid).set({...data,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      TENANTS.push({id:mid,...data});
+      log('🏢',`New tenant "${name}" created`,'var(--accent)');
+    }
+    hideL(); closeM('tm'); renderDash(); renderTT(); renderPlanOpts();
+    toast(editId?'Tenant updated ✓':'Tenant created ✓','success');
+  }catch(e){hideL();toast('Save failed: '+e.message,'error');}
+}
+
+async function delTenant(id){
+  const t=TENANTS.find(x=>x.id===id);
+  confirm2(`Delete "${t?.name||id}"?`,'Removes from Firestore. Sub-collections (OPD, employees) remain.',async()=>{
+    showL('Deleting…');
+    try{
+      await db.collection('merchants').doc(id).delete();
+      TENANTS=TENANTS.filter(x=>x.id!==id); USERS=USERS.filter(u=>u.tId!==id);
+      hideL(); renderDash(); renderTT();
+      log('🗑️',`Tenant "${t?.name}" deleted`,'var(--red)');
+      toast('Tenant deleted','error');
+    }catch(e){hideL();toast('Delete failed: '+e.message,'error');}
+  });
+}
+
+// ── USERS ─────────────────────────────────────────────────
+function renderUT(){
+  const q=(G('us').value||'').toLowerCase(), rf=G('urf').value, sf=G('usf').value;
+  let rows=USERS.filter(u=>{
+    const m=!q||(u.name||'').toLowerCase().includes(q)||(u.email||u.username||'').toLowerCase().includes(q)||(u.tName||'').toLowerCase().includes(q);
+    return m&&(!rf||u.role===rf)&&(!sf||u.status===sf);
+  });
+  G('uc-lbl').textContent=rows.length;
+  const tb=G('ut-body');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">👥</div><p>No users match</p></div></td></tr>';return;}
+  const re={doctor:'👨‍⚕️',nurse:'💉',admin:'🔐',pharmacy:'💊',staff:'👤'};
+  tb.innerHTML=rows.map(u=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px">${inits(u.name)}</div>${esc(u.name||'—')}</div></td>
+      <td style="color:var(--muted);font-size:10.5px">${esc(u.email||u.username||'—')}</td>
+      <td><span class="badge bb">${re[u.role]||''} ${esc(u.role||'—')}</span></td>
+      <td style="font-size:10.5px">${esc(u.tName||'—')}</td>
+      <td>${sbadge(u.status||'Approved')}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-g btn-s" onclick="editUser('${u.id}','${u.tId}')">✏️</button>
+        ${u.status==='Pending'?`<button class="btn btn-p btn-s" onclick="approveUser('${u.id}','${u.tId}')">✓</button>`:''}
+        <button class="btn btn-d btn-s" onclick="delUser('${u.id}','${u.tId}')">🗑</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function openUserModal(id,tId){
+  G('um-tenant').innerHTML='<option value="">— Select Tenant —</option>'+TENANTS.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  if(id){
+    const u=USERS.find(x=>x.id===id&&x.tId===tId); if(!u)return;
+    G('um-title').textContent='Edit User'; G('um-id').value=id; G('um-tid').value=tId;
+    G('um-name').value=u.name||''; G('um-email').value=u.email||u.username||'';
+    G('um-role').value=u.role||'staff'; G('um-status').value=u.status||'Approved';
+    G('um-mob').value=u.mobile||''; G('um-tenant').value=tId; G('um-tenant').disabled=true;
+  } else {
+    G('um-title').textContent='Add User'; G('um-id').value=''; G('um-tid').value='';
+    ['um-name','um-email','um-mob'].forEach(f=>G(f).value='');
+    G('um-role').value='doctor'; G('um-status').value='Approved'; G('um-tenant').disabled=false;
+  }
+  openM('um');
+}
+function editUser(id,tId){ openUserModal(id,tId); }
+
+async function saveUser(){
+  const name=G('um-name').value.trim(), email=G('um-email').value.trim(), tid=G('um-tenant').value;
+  if(!name||!email||!tid){toast('Name, email and tenant required','error');return;}
+  const editId=G('um-id').value, tDocId=editId?G('um-tid').value:tid;
+  const data={name,email,role:G('um-role').value,status:G('um-status').value,mobile:G('um-mob').value.trim()};
+  showL(editId?'Updating user…':'Adding user…');
+  try{
+    const col=db.collection('merchants').doc(tDocId).collection('users');
+    if(editId){
+      await col.doc(editId).update({...data,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      USERS=USERS.map(u=>u.id===editId&&u.tId===tDocId?{...u,...data}:u);
+      log('✏️',`User "${name}" updated`,'var(--blue)');
+    } else {
+      const ref=await col.add({...data,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      const t=TENANTS.find(x=>x.id===tDocId);
+      USERS.push({id:ref.id,tId:tDocId,tName:t?.name||tDocId,...data});
+      log('👤',`User "${name}" added to ${t?.name||tDocId}`,'var(--accent)');
+    }
+    hideL(); closeM('um'); G('um-tenant').disabled=false;
+    renderDash(); renderUT(); toast(editId?'User updated ✓':'User added ✓','success');
+  }catch(e){hideL();toast('Save failed: '+e.message,'error');}
+}
+
+async function approveUser(id,tId){
+  showL('Approving…');
+  try{
+    await db.collection('merchants').doc(tId).collection('users').doc(id).update({status:'Approved',updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    USERS=USERS.map(u=>u.id===id&&u.tId===tId?{...u,status:'Approved'}:u);
+    hideL(); renderDash(); renderUT(); toast('User approved ✓','success');
+    log('✅','User approved','var(--accent)');
+  }catch(e){hideL();toast('Error: '+e.message,'error');}
+}
+
+async function delUser(id,tId){
+  const u=USERS.find(x=>x.id===id&&x.tId===tId);
+  confirm2(`Delete "${u?.name||id}"?`,'Removes from Firestore users subcollection.',async()=>{
+    showL('Deleting…');
+    try{
+      await db.collection('merchants').doc(tId).collection('users').doc(id).delete();
+      USERS=USERS.filter(x=>!(x.id===id&&x.tId===tId));
+      hideL(); renderDash(); renderUT();
+      log('🗑️',`User "${u?.name}" deleted`,'var(--red)');
+      toast('User deleted','error');
+    }catch(e){hideL();toast('Error: '+e.message,'error');}
+  });
+}
+
+// ── BILLING ───────────────────────────────────────────────
+function renderPlanCards(){
+  const c=G('plan-cards'); if(!c)return;
+  c.innerHTML=PLANS.map(p=>`
+    <div class="plan-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="pname" style="color:${p.color||'var(--accent)'}">${esc(p.name)}</div>
+        <button class="btn btn-g btn-s" onclick="openPlanEditor('${p.id}')" style="padding:2px 6px;font-size:10px">Edit</button>
+      </div>
+      <div class="pprice" style="color:${p.color||'var(--accent)'}">₹${(p.price||0).toLocaleString('en-IN')}<span>/mo</span></div>
+      <div class="pfeatures">${(p.features||[]).map(f=>'✓ '+esc(f)).join('<br>')}</div>
+    </div>`).join('');
+}
+
+function renderBP(){
+  renderPlanCards();
+  const sf=G('bsf').value;
+  let rows=sf?TENANTS.filter(t=>t.status===sf):TENANTS;
+  const mrr=TENANTS.reduce((s,t)=>s+gpp(t.plan),0);
+  const paid=TENANTS.filter(t=>t.status==='active').length;
+  const trial=TENANTS.filter(t=>t.status==='trial').length;
+  const susp=TENANTS.filter(t=>t.status==='suspended').length;
+  G('b-mrr').textContent=fmt(mrr); G('b-paid').textContent=paid;
+  G('b-pct').textContent=TENANTS.length?Math.round(paid/TENANTS.length*100)+'% paid':'0%';
+  G('b-trial').textContent=trial; G('b-susp').textContent=susp; G('b-tc').textContent=rows.length;
+  const tb=G('bt-body');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="ei">💳</div><p>No tenants yet</p></div></td></tr>';return;}
+  tb.innerHTML=rows.map(t=>{
+    const base=gpp(t.plan), disc=t.discount||0, final=Math.round(base*(1-disc/100));
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="tavatar">${inits(t.name)}</div><div><div style="font-weight:500">${esc(t.name)}</div><div style="font-size:10px;color:var(--muted)">${esc(t.email||'')}</div></div></div></td>
+      <td><select style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11.5px;font-family:'DM Sans',sans-serif" onchange="updatePlan('${t.id}',this.value)">
+        ${PLANS.map(p=>`<option value="${esc(p.name)}"${t.plan===p.name?' selected':''}>${esc(p.name)}</option>`).join('')}
+      </select></td>
+      <td style="color:var(--muted);font-size:11.5px">${fmt(base)}</td>
+      <td><input type="number" value="${disc}" min="0" max="100"
+        style="width:48px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:3px 5px;color:var(--text);font-size:11.5px;text-align:center"
+        onchange="updateDisc('${t.id}',this.value)"/>%</td>
+      <td style="font-weight:700;color:var(--gold)">${fmt(final)}</td>
+      <td>${sbadge(t.status)}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-g btn-s" onclick="openInvoiceFor('${t.id}')">🧾</button>
+        <button class="btn btn-g btn-s" style="color:var(--accent)" onclick="markPaid('${t.id}')">✓ Paid</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+async function updatePlan(id,plan){
+  try{
+    await db.collection('merchants').doc(id).update({plan,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    TENANTS=TENANTS.map(t=>t.id===id?{...t,plan}:t);
+    renderBP(); renderDash(); toast('Plan updated → '+plan,'success');
+    log('💳',`Plan → ${plan} for ${TENANTS.find(t=>t.id===id)?.name}`,'var(--blue)');
+  }catch(e){toast('Update failed: '+e.message,'error');}
+}
+
+async function updateDisc(id,val){
+  const discount=Math.min(100,Math.max(0,parseInt(val)||0));
+  try{
+    await db.collection('merchants').doc(id).update({discount,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    TENANTS=TENANTS.map(t=>t.id===id?{...t,discount}:t);
+    renderBP(); toast('Discount set to '+discount+'%','success');
+  }catch(e){toast('Update failed: '+e.message,'error');}
+}
+
+async function markPaid(id){
+  const nd=new Date(Date.now()+30*864e5).toISOString();
+  try{
+    await db.collection('merchants').doc(id).update({status:'active',nextDue:nd,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    TENANTS=TENANTS.map(t=>t.id===id?{...t,status:'active',nextDue:nd}:t);
+    renderBP(); renderDash(); toast('Marked as paid ✓','success');
+    log('✅',`"${TENANTS.find(t=>t.id===id)?.name}" marked paid`,'var(--accent)');
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
+// ── PLAN EDITOR ───────────────────────────────────────────
+function openPlanEditor(){
+  G('pe-rows').innerHTML=PLANS.map((p,i)=>`
+    <div class="perow">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-weight:600;font-size:11.5px;color:var(--accent)">Plan ${i+1}</div>
+        <button class="btn btn-d btn-s" onclick="rmPlanRow(${i})">Remove</button>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Plan Name</label><input class="fi" id="pe-n-${i}" value="${esc(p.name)}" placeholder="Pro"/></div>
+        <div class="fg"><label class="fl">Monthly Price (₹)</label><input class="fi" type="number" id="pe-p-${i}" value="${p.price||0}" min="0"/></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Accent Colour</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="color" id="pe-c-${i}" value="${p.color||'#74c69d'}" style="width:36px;height:28px;border-radius:5px;border:1px solid var(--border);background:none;cursor:pointer;padding:2px"/>
+          <span style="font-size:10.5px;color:var(--muted)">Used on plan card and invoice</span>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Features (one per line)</label><textarea class="fi" id="pe-f-${i}" style="min-height:72px">${(p.features||[]).join('\n')}</textarea></div>
+    </div>`).join('');
+  openM('pem');
+}
+function addPlanRow(){ PLANS.push({id:'p'+Date.now(),name:'',price:0,color:'#74c69d',features:[]}); openPlanEditor(); }
+function rmPlanRow(i){ if(PLANS.length<=1){toast('Need at least one plan','error');return;} confirm2('Remove plan?','Tenants keep their current plan tag.',()=>{PLANS.splice(i,1);openPlanEditor();}); }
+
+async function savePlans(){
+  const cnt=G('pe-rows').querySelectorAll('[id^=pe-n-]').length;
+  const up=[];
+  for(let i=0;i<cnt;i++){
+    const name=(G(`pe-n-${i}`)||{}).value?.trim();
+    const price=parseInt((G(`pe-p-${i}`)||{}).value)||0;
+    const color=(G(`pe-c-${i}`)||{}).value||'#74c69d';
+    const fraw=(G(`pe-f-${i}`)||{}).value||'';
+    const features=fraw.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!name){toast('Plan name cannot be empty','error');return;}
+    up.push({id:PLANS[i]?.id||'p'+Date.now(),name,price,color,features});
+  }
+  showL('Saving plans…');
+  try{
+    await db.collection('config').doc('superAdmin').set({plans:up,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    PLANS=up; hideL(); closeM('pem');
+    renderPlanCards(); renderBP(); renderPlanOpts(); renderDash();
+    toast('Plans saved to Firestore ✓','success');
+    log('✏️','Pricing plans updated','var(--gold)');
+  }catch(e){hideL();toast('Save failed: '+e.message,'error');}
+}
+
+// ── INVOICE ───────────────────────────────────────────────
+function openInvoiceWizard(){
+  const sel=G('iv-t');
+  sel.innerHTML='<option value="">— Select Tenant —</option>'+TENANTS.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  const now=new Date(), due=new Date(Date.now()+30*864e5);
+  G('iv-date').value=now.toISOString().slice(0,10); G('iv-due').value=due.toISOString().slice(0,10);
+  G('iv-no').value='OHC-'+now.getFullYear()+'-'+String(Math.floor(Math.random()*900)+100);
+  G('iv-disc').value='0'; G('iv-gst').value=String(GCFG.gstPct||18);
+  G('iv-notes').value='Payment via NEFT/UPI/Cheque within due date.\nGSTIN: 29AABCX1234Z1ZX\nSupport: '+GCFG.supportEmail;
+  IVC=0; G('iv-items').innerHTML='';
+  addIvItem('OHC Portal Subscription','Monthly',1,0);
+  openM('iw');
+}
+function openInvoiceFor(id){ openInvoiceWizard(); G('iv-t').value=id; onIvT(); }
+
+function onIvT(){
+  const id=G('iv-t').value, t=TENANTS.find(x=>x.id===id); if(!t)return;
+  const d0=G('iv-items').querySelector('.iv-d'), r0=G('iv-items').querySelector('.iv-r');
+  if(d0) d0.value=`${t.name} — ${t.plan} Plan (Monthly Subscription)`;
+  if(r0){ r0.value=gpp(t.plan); calcTotal(); }
+  G('iv-disc').value=t.discount||0; calcTotal();
+}
+
+function addIvItem(desc='',unit='Monthly',qty=1,rate=0){
+  const i=IVC++, w=document.createElement('div');
+  w.id='iv-i-'+i; w.className='irow';
+  w.innerHTML=`
+    <input class="ii iv-d" type="text" placeholder="e.g. OHC Portal Subscription" value="${esc(desc)}" oninput="calcTotal()"/>
+    <input class="ii iv-u" type="text" placeholder="Monthly" value="${esc(unit)}"/>
+    <input class="ii iv-q" type="number" placeholder="1" value="${qty}" min="1" oninput="calcTotal()"/>
+    <input class="ii iv-r" type="number" placeholder="0" value="${rate}" min="0" oninput="calcTotal()"/>
+    <button class="btn btn-d btn-s" onclick="rmIvItem('iv-i-${i}')" style="padding:3px 5px">✕</button>`;
+  G('iv-items').appendChild(w); calcTotal();
+}
+function rmIvItem(id){ const el=G(id); if(el){el.remove();calcTotal();} }
+
+function calcTotal(){
+  let sub=0;
+  document.querySelectorAll('#iv-items > div').forEach(r=>{ const q=parseFloat(r.querySelector('.iv-q')?.value)||0, r2=parseFloat(r.querySelector('.iv-r')?.value)||0; sub+=q*r2; });
+  const dp=parseFloat(G('iv-disc')?.value)||0, gp=parseFloat(G('iv-gst')?.value)||0;
+  const da=Math.round(sub*dp/100), ga=Math.round((sub-da)*gp/100), tot=sub-da+ga;
+  G('iv-sub').textContent=fmt(sub); G('iv-dv').textContent='−'+fmt(da); G('iv-gv').textContent='+'+fmt(ga); G('iv-tot').textContent=fmt(tot);
+}
+
+function previewInv(){
+  const tid=G('iv-t').value; if(!tid){toast('Select a tenant','error');return;}
+  const t=TENANTS.find(x=>x.id===tid); if(!t){toast('Tenant not found','error');return;}
+  const idate=G('iv-date').value, idue=G('iv-due').value, ino=G('iv-no').value, notes=G('iv-notes').value;
+  const dp=parseFloat(G('iv-disc').value)||0, gp=parseFloat(G('iv-gst').value)||18;
+  const items=[];
+  document.querySelectorAll('#iv-items > div').forEach(r=>{
+    const desc=r.querySelector('.iv-d')?.value||'', unit=r.querySelector('.iv-u')?.value||'';
+    const qty=parseFloat(r.querySelector('.iv-q')?.value)||0, rate=parseFloat(r.querySelector('.iv-r')?.value)||0;
+    if(desc) items.push({desc,unit,qty,rate,amount:qty*rate});
+  });
+  if(!items.length){toast('Add at least one line item','error');return;}
+  const sub=items.reduce((s,i)=>s+i.amount,0);
+  const da=Math.round(sub*dp/100), ga=Math.round((sub-da)*gp/100), tot=sub-da+ga;
+  const fd=iso=>{ if(!iso)return ''; try{return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});}catch(e){return iso;}};
+  const pc=planColor(t.plan);
+
+  G('ip-area').innerHTML=`
+  <div style="font-family:'DM Sans',sans-serif;color:#1a1a1a;max-width:660px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;padding-bottom:18px;border-bottom:3px solid ${pc}">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="width:40px;height:40px;background:${pc};border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px">+</div>
+          <div>
+            <div style="font-family:'DM Serif Display',serif;font-size:18px">OHC Portal</div>
+            <div style="font-size:9.5px;color:#666;letter-spacing:.08em;text-transform:uppercase">Occupational Health Centre</div>
+          </div>
+        </div>
+        <div style="font-size:10.5px;color:#555;line-height:1.9">ohcportal.in &nbsp;|&nbsp; ${esc(GCFG.supportEmail)}<br>GSTIN: 29AABCX1234Z1ZX</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'DM Serif Display',serif;font-size:24px;color:${pc}">INVOICE</div>
+        <div style="font-size:11.5px;color:#555;margin-top:2px"># ${esc(ino)}</div>
+        <div style="margin-top:9px;font-size:10.5px;color:#555"><div><b>Date:</b> ${fd(idate)}</div><div style="margin-top:2px"><b>Due:</b> ${fd(idue)}</div></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:22px">
+      <div>
+        <div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#aaa;margin-bottom:4px">Bill To</div>
+        <div style="font-size:14px;font-weight:700">${esc(t.name)}</div>
+        <div style="font-size:11.5px;color:#555;line-height:1.9;margin-top:3px">${esc(t.email||'')}${t.phone?'<br>'+esc(t.phone):''}${t.address?'<br>'+esc(t.address):''}</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px 15px;text-align:right;min-width:140px">
+        <div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#aaa;margin-bottom:4px">Subscription</div>
+        <div style="display:inline-block;background:${pc}20;color:${pc};border-radius:20px;padding:3px 11px;font-size:10.5px;font-weight:700">${esc(t.plan||'—')} Plan</div>
+        <div style="font-size:10.5px;color:#555;margin-top:6px">${esc(t.subdomain||t.id)}.ohcportal.in</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:18px">
+      <thead><tr style="background:${pc};color:#fff">
+        <th style="padding:8px 12px;text-align:left;border-radius:5px 0 0 0">#</th>
+        <th style="padding:8px 12px;text-align:left">Description</th>
+        <th style="padding:8px 12px;text-align:center">Unit</th>
+        <th style="padding:8px 12px;text-align:center">Qty</th>
+        <th style="padding:8px 12px;text-align:right">Rate</th>
+        <th style="padding:8px 12px;text-align:right;border-radius:0 5px 0 0">Amount</th>
+      </tr></thead>
+      <tbody>${items.map((it,idx)=>`
+        <tr style="border-bottom:1px solid #e8e8e8;background:${idx%2===0?'#fff':'#f9fafb'}">
+          <td style="padding:8px 12px;color:#aaa">${idx+1}</td>
+          <td style="padding:8px 12px;font-weight:500">${esc(it.desc)}</td>
+          <td style="padding:8px 12px;text-align:center;color:#555">${esc(it.unit)}</td>
+          <td style="padding:8px 12px;text-align:center">${it.qty}</td>
+          <td style="padding:8px 12px;text-align:right">${fmt(it.rate)}</td>
+          <td style="padding:8px 12px;text-align:right;font-weight:600">${fmt(it.amount)}</td>
+        </tr>`).join('')}</tbody>
+    </table>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:22px">
+      <div style="min-width:250px">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:11.5px"><span style="color:#555">Subtotal</span><span>${fmt(sub)}</span></div>
+        ${da>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:11.5px"><span style="color:#d44">Discount (${dp}%)</span><span style="color:#d44">−${fmt(da)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:11.5px"><span style="color:#555">GST (${gp}%)</span><span>+${fmt(ga)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:9px 0 0;font-size:15px;font-weight:800"><span>Total Due</span><span style="color:${pc}">${fmt(tot)}</span></div>
+      </div>
+    </div>
+    ${notes?`<div style="background:#f0f9f4;border-left:3px solid ${pc};border-radius:0 6px 6px 0;padding:11px 14px;font-size:10.5px;color:#444;line-height:1.9;margin-bottom:18px;white-space:pre-wrap">${esc(notes)}</div>`:''}
+    <div style="border-top:2px solid #eee;padding-top:11px;text-align:center;font-size:9.5px;color:#bbb">Computer-generated invoice &nbsp;|&nbsp; OHC Portal v5 · ILO C161 Compliant &nbsp;|&nbsp; ohcportal.in</div>
+  </div>`;
+
+  closeM('iw'); openM('ip');
+  log('🧾',`Invoice ${ino} generated for ${t.name}`,'var(--gold)');
+}
+
+function printInv(){
+  const area=G('ip-area');
+  const w=window.open('','_blank','width=860,height=1100');
+  w.document.write(`<!DOCTYPE html><html><head>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:#fff}@media print{@page{size:A4;margin:13mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+  </head><body>${area.innerHTML}</body></html>`);
+  w.document.close(); setTimeout(()=>{w.focus();w.print();},600);
+}
+
+// ── ANALYTICS ─────────────────────────────────────────────
+async function renderAN(){
+  showL('Loading analytics from Firestore…');
+  try{
+    let opd=0,emp=0,ph=0,cert=0; const rows=[];
+    await Promise.all(TENANTS.map(async t=>{
+      try{
+        const [es,os,ps,cs]=await Promise.all([
+          db.collection('merchants').doc(t.id).collection('employees').get(),
+          db.collection('merchants').doc(t.id).collection('opd').get(),
+          db.collection('merchants').doc(t.id).collection('pharmacy').get(),
+          db.collection('merchants').doc(t.id).collection('certificates').get()
+        ]);
+        emp+=es.size; opd+=os.size; ph+=ps.size; cert+=cs.size;
+        rows.push({name:t.name,plan:t.plan,e:es.size,o:os.size});
+      }catch(e2){}
+    }));
+    hideL();
+    G('an-opd').textContent=opd; G('an-emp').textContent=emp; G('an-ph').textContent=ph; G('an-cert').textContent=cert;
+    rows.sort((a,b)=>b.o-a.o);
+    G('an-tb').innerHTML=rows.length?rows.map(r=>`
+      <tr>
+        <td><div style="display:flex;align-items:center;gap:7px"><div class="tavatar">${inits(r.name)}</div>${esc(r.name)}</div></td>
+        <td>${r.e}</td><td>${r.o}</td><td><span class="badge bb">${esc(r.plan||'—')}</span></td>
+      </tr>`).join(''):'<tr><td colspan="4"><div class="empty"><div class="ei">📊</div><p>No data</p></div></td></tr>';
+    const dist={};
+    TENANTS.forEach(t=>{ dist[t.plan||'Unknown']=(dist[t.plan||'Unknown']||0)+1; });
+    const tot=TENANTS.length||1;
+    G('an-dist').innerHTML=Object.entries(dist).map(([n,cnt])=>{
+      const pct=Math.round(cnt/tot*100), color=(PLANS.find(p=>p.name===n)||{}).color||'var(--accent)';
+      return `<div style="margin-bottom:13px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px">
+          <span style="font-weight:500">${esc(n)}</span><span style="color:var(--muted)">${cnt} · ${pct}%</span>
+        </div>
+        <div class="pbar"><div class="pfill" style="width:${pct}%;background:${color}"></div></div>
+      </div>`;
+    }).join('')||'<p style="color:var(--muted);font-size:11.5px">No tenants yet</p>';
+  }catch(e){hideL();toast('Analytics error: '+e.message,'error');}
+}
+
+// ── ACTIVITY ──────────────────────────────────────────────
+function renderAF(){
+  const f=G('af');
+  if(!ACTIVITY.length){f.innerHTML='<div class="empty"><div class="ei">🕐</div><p>Actions you take here will appear.</p></div>';return;}
+  f.innerHTML=ACTIVITY.map(a=>`
+    <div class="fitem">
+      <div class="ficon" style="background:${a.color||'var(--accent)'}20">${a.icon}</div>
+      <div><div class="ftxt">${esc(a.text)}</div><div class="ftime">${ago(a.time)}</div></div>
+    </div>`).join('');
+}
+
+// ── SETTINGS ──────────────────────────────────────────────
+async function loadCfgForm(){
+  try{
+    const s=await db.collection('config').doc('superAdmin').get();
+    if(s.exists){ const d=s.data(); if(d.trialDays)G('cfg-trial').value=d.trialDays; if(d.supportEmail)G('cfg-support').value=d.supportEmail; if(d.gstPct)G('cfg-gst').value=d.gstPct; }
+  }catch(e){}
+}
+async function saveConfig(){
+  const data={trialDays:parseInt(G('cfg-trial').value)||14, supportEmail:G('cfg-support').value.trim(), gstPct:parseInt(G('cfg-gst').value)||18};
+  showL('Saving…');
+  try{
+    await db.collection('config').doc('superAdmin').set({...data,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    GCFG={...GCFG,...data}; hideL(); toast('Config saved ✓','success');
+    log('⚙️','Platform config updated','var(--muted)');
+  }catch(e){hideL();toast('Save failed: '+e.message,'error');}
+}
+
+// ── INIT ──────────────────────────────────────────────────
+G('tb-time').textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+</script>
+</body>
+</html>
