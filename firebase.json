@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "README.md"
+    ],
+    "rewrites": [
+      {
+        "source": "/super-admin",
+        "destination": "/super-admin.html"
+      }
+    ]
+  }
+}
